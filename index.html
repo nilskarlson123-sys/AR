@@ -2,220 +2,43 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Three.js WebXR AR Viewer</title>
+<title>Three.js Viewer</title>
 
 <style>
-body{
+
+html,body{
     margin:0;
     overflow:hidden;
-    background:#222;
-    font-family:Arial, sans-serif;
+    background:#e9e9e9;
 }
 
-#info{
+#loading{
     position:absolute;
     top:20px;
     left:20px;
+    padding:10px 15px;
+    background:rgba(0,0,0,.65);
     color:white;
-    z-index:100;
-    background:rgba(0,0,0,.5);
-    padding:10px;
+    font-family:Arial;
     border-radius:8px;
-}
-
-#arButton{
-    position:absolute;
-    bottom:30px;
-    left:50%;
-    transform:translateX(-50%);
-    padding:15px 30px;
-    font-size:18px;
-    border:none;
-    border-radius:10px;
-    background:#0a84ff;
-    color:white;
-    cursor:pointer;
     z-index:100;
 }
 
 canvas{
     display:block;
 }
+
 </style>
 
 </head>
+
 <body>
 
-<div id="info">Lade Modell...</div>
-<button id="arButton">AR starten</button>
+<div id="loading">Lade Modell...</div>
 
-<script type="module">
-
-import * as THREE from "https://unpkg.com/three@0.179.1/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.179.1/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "https://unpkg.com/three@0.179.1/examples/jsm/loaders/GLTFLoader.js";
-import { ARButton } from "https://unpkg.com/three@0.179.1/examples/jsm/webxr/ARButton.js";
-
-// --------------------------------------------------
-// URL Parameter
-// Beispiel:
-// index.html?model=https://meineseite.de/model.glb
-// --------------------------------------------------
-
-const params = new URLSearchParams(window.location.search);
-const modelUrl = params.get("model");
-
-const info = document.getElementById("info");
-
-// --------------------------------------------------
-// Szene
-// --------------------------------------------------
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf5f5f5);
-
-const camera = new THREE.PerspectiveCamera(
-70,
-window.innerWidth / window.innerHeight,
-0.01,
-100
-);
-
-camera.position.set(0,1.2,3);
-
-const renderer = new THREE.WebGLRenderer({
-antialias:true,
-alpha:true
-});
-
-renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.xr.enabled = true;
-
-document.body.appendChild(renderer.domElement);
-
-// --------------------------------------------------
-// Steuerung
-// --------------------------------------------------
-
-const controls = new OrbitControls(camera,renderer.domElement);
-controls.enableDamping = true;
-
-// --------------------------------------------------
-// Licht
-// --------------------------------------------------
-
-scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,2));
-
-const light = new THREE.DirectionalLight(0xffffff,2);
-light.position.set(3,5,3);
-scene.add(light);
-
-// --------------------------------------------------
-// Modell laden
-// --------------------------------------------------
-
-if(modelUrl){
-
-    const loader = new GLTFLoader();
-
-    loader.load(
-
-        decodeURIComponent(modelUrl),
-
-        (gltf)=>{
-
-            scene.add(gltf.scene);
-
-            info.innerHTML="Modell geladen ✔";
-
-        },
-
-        undefined,
-
-        (err)=>{
-
-            console.error(err);
-
-            info.innerHTML="Fehler beim Laden des Modells";
-
-        }
-
-    );
-
-}else{
-
-    info.innerHTML="Kein Modell angegeben.";
-
-}
-
-// --------------------------------------------------
-// Animation
-// --------------------------------------------------
-
-renderer.setAnimationLoop(()=>{
-
-controls.update();
-
-renderer.render(scene,camera);
-
-});
-
-// --------------------------------------------------
-// Resize
-// --------------------------------------------------
-
-window.addEventListener("resize",()=>{
-
-camera.aspect = window.innerWidth/window.innerHeight;
-
-camera.updateProjectionMatrix();
-
-renderer.setSize(window.innerWidth,window.innerHeight);
-
-});
-
-// --------------------------------------------------
-// Eigener AR Button
-// --------------------------------------------------
-
-document.getElementById("arButton").onclick=()=>{
-
-if(!navigator.xr){
-
-alert("WebXR nicht verfügbar.");
-
-return;
-
-}
-
-navigator.xr.isSessionSupported("immersive-ar").then((supported)=>{
-
-if(!supported){
-
-alert("AR wird auf diesem Gerät nicht unterstützt.");
-
-return;
-
-}
-
-const btn = ARButton.createButton(renderer,{
-requiredFeatures:[]
-});
-
-btn.style.display="none";
-
-document.body.appendChild(btn);
-
-btn.click();
-
-});
-
-};
-
-</script>
+<script type="module" src="main.js"></script>
 
 </body>
 </html>
