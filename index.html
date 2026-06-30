@@ -1,121 +1,106 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="utf-8">
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    html, body {
-      margin: 0;
-      overflow: hidden;
-      background-color: transparent !important;
-      background: transparent !important;
-    }
-    .a-canvas {
-      background-color: transparent !important;
-      background: transparent !important;
-    }
-    .error-message {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      right: 20px;
-      padding: 12px;
-      background: rgba(200, 0, 0, 0.85);
-      color: white;
-      font-family: sans-serif;
-      border-radius: 8px;
-      z-index: 9999;
-    }
-    /* Debug-Overlay, zeigt euch live den XR-Status an.
-       Kann nach dem Testen einfach entfernt werden. */
-    #xr-debug {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      padding: 8px 12px;
-      background: rgba(0,0,0,0.6);
-      color: #0f0;
-      font-family: monospace;
-      font-size: 12px;
-      border-radius: 6px;
-      z-index: 9999;
-      max-width: 90vw;
-      white-space: pre-wrap;
-    }
-  </style>
+<title>Quest 3 Three.js AR</title>
+
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:transparent;
+}
+
+canvas{
+    display:block;
+}
+</style>
 </head>
-
 <body>
-  <div id="xr-debug">XR-Status: warte auf Session...</div>
 
-  <a-scene
-    webxr="mode: ar; requiredFeatures: local-floor; optionalFeatures: hit-test;"
-    vr-mode-ui="enterVR: false; enterAR: true"
-    renderer="alpha: true; colorManagement: true; clearColor: #000000; clearAlpha: 0; foveationLevel: 0;"
-    background="transparent: true">
+<script type="module">
 
-    <a-entity light="type: ambient; color: #BBB"></a-entity>
-    <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
+import * as THREE from "https://unpkg.com/three@0.179.1/build/three.module.js";
+import { ARButton } from "https://unpkg.com/three@0.179.1/examples/jsm/webxr/ARButton.js";
 
-    <a-entity id="ar-viewer" position="0 0 -1"></a-entity>
-  </a-scene>
+const scene = new THREE.Scene();
 
-  <script>
-    // Das Model-URL aus der Adresszeile auslesen (alles, was nach dem "?" steht)
-    const modelUrl = window.location.search.substring(1);
-    const viewer = document.getElementById('ar-viewer');
-    const debugEl = document.getElementById('xr-debug');
+const camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth/window.innerHeight,
+    0.01,
+    100
+);
 
-    if (modelUrl && modelUrl.trim() !== "") {
-      viewer.setAttribute('gltf-model', modelUrl);
-    } else {
-      viewer.style.display = "none";
-      const errorDiv = document.createElement('div');
-      errorDiv.className = "error-message";
-      errorDiv.innerText = "Fehler: Kein 3D-Modell in der URL angegeben!";
-      document.body.appendChild(errorDiv);
-    }
+const renderer = new THREE.WebGLRenderer({
+    antialias:true,
+    alpha:true
+});
 
-    const sceneEl = document.querySelector('a-scene');
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
 
-    sceneEl.addEventListener('enter-vr', function () {
-      const isAR = this.is('ar-mode');
-      let blendMode = 'unbekannt';
+renderer.xr.enabled = true;
 
-      // xrSession liegt je nach A-Frame-Version an unterschiedlichen Stellen,
-      // daher beide Varianten abfragen
-      const xrSession = this.xrSession || (this.renderer && this.renderer.xr && this.renderer.xr.getSession && this.renderer.xr.getSession());
+document.body.appendChild(renderer.domElement);
 
-      if (xrSession) {
-        blendMode = xrSession.environmentBlendMode || 'nicht vorhanden';
-      }
+// Passthrough-AR Button
 
-      const msg = `XR-Modus: ${isAR ? 'AR' : 'VR'}\nenvironmentBlendMode: ${blendMode}`;
-      console.log(msg);
-      debugEl.innerText = msg;
+document.body.appendChild(
 
-      if (isAR) {
-        // Bei korrektem AR-Modus übernimmt eigentlich der WebXR-Compositor
-        // die Transparenz. Dieser Block ist nur ein zusätzliches Sicherheitsnetz
-        // und sollte normalerweise nichts mehr bewirken müssen.
-        const renderer = this.renderer;
-        if (renderer) {
-          renderer.setClearColor(0x000000, 0);
-          renderer.clear();
-        }
-      }
+ARButton.createButton(renderer,{
 
-      if (blendMode === 'opaque') {
-        debugEl.style.color = '#f55';
-        debugEl.innerText += '\n⚠️ Session ist opak -> kein echter Passthrough!';
-      }
-    });
+    requiredFeatures:[]
 
-    sceneEl.addEventListener('exit-vr', function () {
-      debugEl.innerText = 'XR-Status: Session beendet';
-    });
-  </script>
+})
+
+);
+
+// Licht
+
+scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,2));
+
+// Würfel
+
+const cube = new THREE.Mesh(
+
+new THREE.BoxGeometry(0.2,0.2,0.2),
+
+new THREE.MeshStandardMaterial({
+
+color:0x00ff00
+
+})
+
+);
+
+cube.position.set(0,1,-1);
+
+scene.add(cube);
+
+// Animation
+
+renderer.setAnimationLoop(()=>{
+
+    cube.rotation.y+=0.01;
+
+    renderer.render(scene,camera);
+
+});
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight;
+
+camera.updateProjectionMatrix();
+
+renderer.setSize(window.innerWidth,window.innerHeight);
+
+});
+
+</script>
+
 </body>
-
 </html>
