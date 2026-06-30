@@ -1,42 +1,71 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Quest 3 Three.js AR</title>
+<title>Three.js WebXR AR</title>
 
 <style>
 body{
     margin:0;
     overflow:hidden;
-    background:transparent;
+    background:#222;
 }
 
-canvas{
-    display:block;
+#arButton{
+    position:absolute;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%);
+    padding:15px 30px;
+    font-size:20px;
+    border:none;
+    border-radius:10px;
+    background:#0a84ff;
+    color:white;
+    cursor:pointer;
+    z-index:100;
+}
+
+#info{
+    position:absolute;
+    top:20px;
+    left:20px;
+    color:white;
+    font-family:Arial;
+    z-index:100;
 }
 </style>
+
 </head>
 <body>
+
+<div id="info">Three.js Viewer</div>
+<button id="arButton">AR starten</button>
 
 <script type="module">
 
 import * as THREE from "https://unpkg.com/three@0.179.1/build/three.module.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.179.1/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "https://unpkg.com/three@0.179.1/examples/jsm/controls/OrbitControls.js";
 import { ARButton } from "https://unpkg.com/three@0.179.1/examples/jsm/webxr/ARButton.js";
 
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf0f0f0);
 
 const camera = new THREE.PerspectiveCamera(
-    70,
-    window.innerWidth/window.innerHeight,
-    0.01,
-    100
+70,
+window.innerWidth/window.innerHeight,
+0.01,
+100
 );
 
+camera.position.set(0,1.2,3);
+
 const renderer = new THREE.WebGLRenderer({
-    antialias:true,
-    alpha:true
+antialias:true,
+alpha:true
 });
 
 renderer.setSize(window.innerWidth,window.innerHeight);
@@ -46,59 +75,97 @@ renderer.xr.enabled = true;
 
 document.body.appendChild(renderer.domElement);
 
-// Passthrough-AR Button
-
-document.body.appendChild(
-
-ARButton.createButton(renderer,{
-
-    requiredFeatures:[]
-
-})
-
-);
+const controls = new OrbitControls(camera,renderer.domElement);
+controls.enableDamping = true;
 
 // Licht
 
 scene.add(new THREE.HemisphereLight(0xffffff,0xbbbbff,2));
 
-// Würfel
+const light = new THREE.DirectionalLight(0xffffff,2);
+light.position.set(2,5,3);
+scene.add(light);
 
-const cube = new THREE.Mesh(
+// Modell laden
 
-new THREE.BoxGeometry(0.2,0.2,0.2),
+const loader = new GLTFLoader();
 
-new THREE.MeshStandardMaterial({
+loader.load(
+"model.glb",
+(gltf)=>{
 
-color:0x00ff00
+    gltf.scene.position.set(0,0,0);
 
-})
+    scene.add(gltf.scene);
 
+},
+undefined,
+(err)=>{
+
+    console.error(err);
+
+}
 );
-
-cube.position.set(0,1,-1);
-
-scene.add(cube);
 
 // Animation
 
 renderer.setAnimationLoop(()=>{
 
-    cube.rotation.y+=0.01;
+controls.update();
 
-    renderer.render(scene,camera);
+renderer.render(scene,camera);
 
 });
 
+// Resize
+
 window.addEventListener("resize",()=>{
 
-camera.aspect=window.innerWidth/window.innerHeight;
+camera.aspect = window.innerWidth/window.innerHeight;
 
 camera.updateProjectionMatrix();
 
 renderer.setSize(window.innerWidth,window.innerHeight);
 
 });
+
+// ---------- eigener AR Button ----------
+
+document.getElementById("arButton").onclick=()=>{
+
+if(!navigator.xr){
+
+alert("WebXR nicht verfügbar");
+
+return;
+
+}
+
+navigator.xr.isSessionSupported("immersive-ar").then((supported)=>{
+
+if(!supported){
+
+alert("AR wird auf diesem Gerät nicht unterstützt.");
+
+return;
+
+}
+
+// versteckten Three.js Button erzeugen
+
+const btn = ARButton.createButton(renderer,{
+requiredFeatures:[]
+});
+
+btn.style.display="none";
+
+document.body.appendChild(btn);
+
+btn.click();
+
+});
+
+};
 
 </script>
 
